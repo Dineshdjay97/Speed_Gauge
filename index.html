@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velocity Gauge - Fictional Vehicle</title>
+    <style>
+        :root {
+            --bg-color: #0a0b10;
+            --accent-color: #00f2ff;
+            --gauge-base: #1a1d26;
+            --needle-color: #ff3c00;
+            --text-color: #e0e6ed;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .dashboard-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+        }
+
+        #speed-label {
+            position: absolute;
+            top: 65%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        .value {
+            font-size: 3rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            display: block;
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+        }
+
+        .unit {
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+        }
+
+        .tick { stroke: rgba(255,255,255,0.3); stroke-width: 2; }
+        .tick.major { stroke: var(--accent-color); stroke-width: 3; }
+        
+        #needle {
+            transition: transform 0.05s linear;
+            filter: drop-shadow(0 0 8px var(--needle-color));
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <svg viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="95" fill="none" stroke="#2a2e38" stroke-width="8" />
+        
+        <circle cx="100" cy="100" r="90" fill="var(--gauge-base)" />
+        
+        <g id="ticks-container"></g>
+
+        <path d="M 40 160 A 85 85 0 1 1 160 160" fill="none" stroke="rgba(0, 242, 255, 0.1)" stroke-width="4" stroke-linecap="round"/>
+
+        <g id="needle" transform="rotate(-135, 100, 100)">
+            <path d="M 100 100 L 100 25" stroke="var(--needle-color)" stroke-width="3" stroke-linecap="round" />
+            <circle cx="100" cy="100" r="6" fill="#ff3c00" />
+            <circle cx="100" cy="100" r="3" fill="#000" />
+        </g>
+    </svg>
+
+    <div id="speed-label">
+        <span class="value" id="speed-text">0</span>
+        <span class="unit">MPH</span>
+    </div>
+</div>
+
+<script>
+    const ticksContainer = document.getElementById('ticks-container');
+    const needle = document.getElementById('needle');
+    const speedText = document.getElementById('speed-text');
+
+    // Generate Ticks (from -135deg to 135deg)
+    for (let i = 0; i <= 200; i += 10) {
+        const angle = (i * 1.35) - 135;
+        const isMajor = i % 20 === 0;
+        const length = isMajor ? 12 : 7;
+        
+        const x1 = 100 + Math.cos((angle - 90) * Math.PI / 180) * 85;
+        const y1 = 100 + Math.sin((angle - 90) * Math.PI / 180) * 85;
+        const x2 = 100 + Math.cos((angle - 90) * Math.PI / 180) * (85 - length);
+        const y2 = 100 + Math.sin((angle - 90) * Math.PI / 180) * (85 - length);
+
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+        line.setAttribute("class", isMajor ? "tick major" : "tick");
+        ticksContainer.appendChild(line);
+    }
+
+    let speed = 0;
+    let targetSpeed = 120;
+    let state = 'accelerating'; // accelerating, pausing, decelerating
+    let lastTime = 0;
+
+    function animate(time) {
+        if (!lastTime) lastTime = time;
+        const delta = time - lastTime;
+
+        if (state === 'accelerating') {
+            speed += 0.8; 
+            if (speed >= 120) {
+                speed = 120;
+                state = 'pausing';
+                setTimeout(() => { state = 'decelerating'; }, 1500);
+            }
+        } else if (state === 'decelerating') {
+            speed -= 1.2;
+            if (speed <= 0) {
+                speed = 0;
+                state = 'pausing';
+                setTimeout(() => { state = 'accelerating'; }, 1000);
+            }
+        }
+
+        // Apply micro-vibration if at peak speed or pausing
+        let displaySpeed = speed;
+        let jitter = 0;
+        if (speed >= 119.5 || (speed <= 0.5 && state === 'pausing')) {
+            jitter = (Math.random() - 0.5) * 0.8;
+        }
+
+        const rotation = ((speed + jitter) * 1.35) - 135;
+        needle.setAttribute('transform', `rotate(${rotation}, 100, 100)`);
+        speedText.textContent = Math.floor(speed);
+
+        requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+</script>
+</body>
+</html>
